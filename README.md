@@ -37,15 +37,15 @@ User Query → Hybrid Retrieval → Vector Store (FAISS) → Context + History �
 ## 📸 Screenshots
 
 ### Main Interface
-![Main Interface](../Images_Researchpaper_bot/pic_1.png)
+![Main Interface](screenshots/pic_1.png)
 *Clean, modern interface with sidebar navigation and chat area*
 
 ### PDF Upload & Processing
-![PDF Processing](../Images_Researchpaper_bot/pic_2.png)
+![PDF Processing](screenshots/pic_2.png)
 *Upload and process research papers with real-time status updates - showing pages loaded, chunks created, and embedding generation*
 
 ### Ready-to-Use Interface
-![Ready Interface](../Images_Researchpaper_bot/pic_3.png)
+![Ready Interface](screenshots/pic_3.png)
 *Interface after PDF processing is complete, showing:*
 - Document uploaded and processed (IJSDR2303219.pdf - 244.2KB)
 - 26 chunks created from the research paper
@@ -54,7 +54,7 @@ User Query → Hybrid Retrieval → Vector Store (FAISS) → Context + History �
 - Text input ready for custom questions
 
 ### Question & Answer Interaction
-![Q&A Interaction](../Images_Researchpaper_bot/pic_4.png)
+![Q&A Interaction](screenshots/pic_4.png)
 *Complete Q&A interaction showing:*
 - **User Question**: "What is the drowsy detection device mentioned in the paper?"
 - **AI Response**: Detailed answer explaining the drowsiness detection system that combines face detection and eye detection to detect driver drowsiness
@@ -200,7 +200,7 @@ RAG-App/
 ├── requirements.txt            # Python dependencies
 ├── README.md                   # This file
 ├── .gitignore                  # Git ignore rules
-└── ../Images_Researchpaper_bot/  # Screenshots folder
+└── screenshots/                # Screenshots folder
     ├── pic_1.png              # Main interface
     ├── pic_2.png              # PDF processing
     ├── pic_3.png              # Ready interface with quick questions
