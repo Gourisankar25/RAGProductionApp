@@ -151,33 +151,8 @@ python main.py
 - "What are the limitations mentioned?"
 - "What future work is suggested?"
 - "What datasets were used?"
-- "What is the drowsy detection device mentioned in the paper?"
 
 ## 🛠️ Technical Details
-
-### Retrieval Strategy
-
-**Hybrid Approach:**
-- **Structural Queries** (abstract, introduction, authors, keywords, title): 
-  - Retrieves first 3 chunks (document start)
-  - Combines with semantic search results
-  - Returns up to 8 diverse chunks
-  - Ensures critical paper metadata is always available
-- **Content Queries**: 
-  - MMR (Maximal Marginal Relevance) for diverse, non-redundant results
-  - Fetches 6 most relevant chunks
-  - Fetch_k=20 candidates for better diversity
-
-### Prompt Engineering
-
-Research-focused prompt that:
-- Identifies as a research assistant analyzing academic papers
-- Enforces strict context-only responses
-- Maintains formal academic tone
-- Handles follow-up questions with conversation history (last 5 Q&A pairs)
-- Explicitly admits when information isn't available
-- Requests citations and specific findings from the paper
-- Structures answers clearly (lists, steps, explanations)
 
 ### Configuration
 
@@ -296,12 +271,6 @@ Both share the same core RAG logic and produce identical results.
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
 
 ## 📝 License
 
