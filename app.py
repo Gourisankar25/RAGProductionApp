@@ -24,6 +24,7 @@ st.markdown("""
     }
     .stTextInput > div > div > input {
         background-color: #f0f2f6;
+        color: #000000 !important;
     }
     .chat-message {
         padding: 1.5rem;
@@ -34,9 +35,17 @@ st.markdown("""
     }
     .user-message {
         background-color: #e3f2fd;
+        color: #000000;
     }
     .bot-message {
         background-color: #f5f5f5;
+        color: #000000;
+    }
+    .user-message strong {
+        color: #1976d2;
+    }
+    .bot-message strong {
+        color: #388e3c;
     }
     .stButton > button {
         width: 100%;
