@@ -1,7 +1,9 @@
-fastapi
 python-dotenv
-uvicorn
-streamlit
 langchain
 langchain-community
+langchain-ollama
+langchain-text-splitters
+langchain-core
 faiss-cpu
+pypdf
+streamlit

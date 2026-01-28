@@ -35,8 +35,8 @@ try:
     if total_chars == 0:
         raise ValueError("PDF has no text content (might be image-based)")
     
-    #Breaks the text into 1000-character chunks with 200-character overlap (helps maintain context between chunks)
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    #Breaks the text into 500-character chunks with 100-character overlap (smaller chunks for better precision)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
     chunks = text_splitter.split_documents(documents)
     
     if not chunks:
@@ -59,7 +59,12 @@ try:
     #Creates a FAISS vector store from the document chunks and their embeddings
     vectorstore = FAISS.from_documents(chunks, embeddings)
     #Sets up a retriever to fetch relevant document chunks based on user queries
-    retriever = vectorstore.as_retriever()
+    # Use MMR (Maximal Marginal Relevance) for diverse chunks including early pages
+    # fetch_k=20 considers more candidates, k=6 returns top 6 diverse chunks
+    retriever = vectorstore.as_retriever(
+        search_type="mmr",
+        search_kwargs={"k": 6, "fetch_k": 20}
+    )
     print("✅ Vector store created successfully!")
 except Exception as e:
     print(f"❌ Error creating vector store: {e}")
@@ -83,39 +88,25 @@ def get_recent_history(history, max_pairs=MAX_HISTORY):
 
 
 
-#=== STEP 1: CONDENSE QUESTION CHAIN ===
-# Converts follow-up questions into standalone questions using chat history
-condense_template = """Given the chat history and a follow-up question, 
-rephrase the follow-up question to be a standalone question that can be understood without the chat history.
+#=== RAG CHAIN FOR RESEARCH PAPERS ===
+# Research-paper focused prompt that maintains accuracy without rephrasing user questions
+answer_template = """You are a helpful research assistant analyzing academic research papers. 
+Provide accurate, detailed answers based strictly on the information in the research paper context below.
 
-Chat History:
-{chat_history}
-
-Follow-up Question: {question}
-
-Standalone Question:"""
-
-condense_prompt = ChatPromptTemplate.from_template(condense_template)
-
-# Chain that takes question + history and outputs standalone question
-condense_chain = (
-    {
-        "chat_history": lambda x: format_chat_history(get_recent_history(chat_history)),
-        "question": RunnablePassthrough()
-    }
-    | condense_prompt
-    | llm
-    | StrOutputParser()
-)
-
-
-
-#=== STEP 2: MAIN RAG CHAIN ===
-# Answers the standalone question using retrieved context
-answer_template = """Answer the question based only on the following context:
+Research Paper Context:
 {context}
 
-Question: {question}
+Previous Conversation (for reference only):
+{chat_history}
+
+Current Question: {question}
+
+Instructions:
+- Answer based ONLY on the research paper context provided
+- Be precise and cite specific findings, methodologies, or results when available
+- If the answer isn't in the context, say "This information is not available in the provided research paper"
+- For follow-up questions, use previous conversation for context but maintain accuracy
+- Use academic tone appropriate for research paper discussion
 
 Answer:"""
 
@@ -125,9 +116,40 @@ def format_docs(docs):
     """Combines multiple retrieved chunks into a single text string"""
     return "\n\n".join(doc.page_content for doc in docs)
 
-# Chain that retrieves context and generates answer
+# Chain that retrieves context and generates answer with chat history
+def get_context_with_debug(question):
+    """Retrieve context with smart strategy for research papers"""
+    # Keywords that indicate user wants early paper sections
+    structure_keywords = ['abstract', 'introduction', 'title', 'authors', 'keywords']
+    
+    # Check if query is about paper structure
+    is_structure_query = any(keyword in question.lower() for keyword in structure_keywords)
+    
+    if is_structure_query:
+        # For structure queries: get first 3 chunks + semantic search
+        all_chunks = vectorstore.similarity_search(question, k=6)
+        # Also get first chunks from the document
+        first_chunks = chunks[:3]
+        # Combine and deduplicate
+        combined = first_chunks + [c for c in all_chunks if c not in first_chunks]
+        docs = combined[:8]  # Take top 8 total
+        print(f"\n🔍 Retrieved {len(docs)} chunks (including early document sections):")
+    else:
+        # Normal semantic search
+        docs = retriever.invoke(question)
+        print(f"\n🔍 Retrieved {len(docs)} chunks:")
+    
+    for i, doc in enumerate(docs, 1):
+        preview = doc.page_content[:150].replace('\n', ' ')
+        print(f"   Chunk {i}: {preview}...")
+    return format_docs(docs)
+
 answer_chain = (
-    {"context": retriever | format_docs, "question": RunnablePassthrough()}
+    {
+        "context": lambda x: get_context_with_debug(x),
+        "chat_history": lambda x: format_chat_history(get_recent_history(chat_history)),
+        "question": lambda x: x
+    }
     | answer_prompt
     | llm
     | StrOutputParser()
@@ -139,7 +161,7 @@ answer_chain = (
 chat_history = []
 
 print("=" * 60)
-print("RAG Chatbot - Ask questions about your PDF")
+print("Research Paper Analysis Bot - Ask questions about your research paper")
 print("=" * 60)
 print("\n💡 Commands:")
 print("  - Type your question to get an answer")
@@ -162,12 +184,15 @@ def load_new_pdf():
         documents = pdf_reader.load()
         
         print("✂️ Splitting text...")
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
         chunks = text_splitter.split_documents(documents)
         
         print("🧠 Creating embeddings...")
         vectorstore = FAISS.from_documents(chunks, embeddings)
-        retriever = vectorstore.as_retriever()
+        retriever = vectorstore.as_retriever(
+            search_type="mmr",
+            search_kwargs={"k": 6, "fetch_k": 20}
+        )
         
         print("✅ PDF loaded successfully!")
         return True
@@ -221,18 +246,9 @@ while True:
     
     # Process actual questions
     try:
-        # If this is a follow-up (chat history exists), condense the question first
-        if chat_history:
-            print("🔄 Processing follow-up question...")
-            standalone_question = condense_chain.invoke(query)
-            print(f"📝 Standalone: {standalone_question}")
-        else:
-            # First question - use as is
-            standalone_question = query
-        
-        # Get answer using the standalone question
-        print("🤖 Thinking...")
-        result = answer_chain.invoke(standalone_question)
+        # Use original question without rephrasing to maintain accuracy
+        print("🤖 Analyzing research paper...")
+        result = answer_chain.invoke(query)
         
         print(f"\n🤖 AI: {result}")
         
